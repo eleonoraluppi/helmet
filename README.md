@@ -1,2 +1,4 @@
 # helmet
-Repo per progetto laboratorio - casco sensorizzato
+Repo per il nostro progetto!
+
+Qui caricheremo le nostre versioni di codici ;)
