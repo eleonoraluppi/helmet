@@ -1,0 +1,36 @@
+#include <Arduino.h>
+#include <Adafruit_TinyUSB.h>  // for Serial
+
+SoftwareTimer blinkTimer;
+SoftwareTimer serialwrite;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  // put your setup code here, to run once:
+  // Configure the timer with 1000 ms interval, with our callback
+  blinkTimer.begin(1000, blink_timer_callback);
+  serialwrite.begin(2000, serial_timer_callback);
+  // Start the timer
+  blinkTimer.start();
+  serialwrite.start();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
+
+void blink_timer_callback(TimerHandle_t xTimerID)
+{
+  // freeRTOS timer ID, ignored if not used
+  (void) xTimerID;
+
+  digitalToggle(LED_BLUE);
+}
+
+void serial_timer_callback(TimerHandle_t xTimerID){
+   (void) xTimerID;
+
+  Serial.println("Callback!");
+}
