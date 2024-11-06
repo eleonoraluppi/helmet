@@ -1,0 +1,51 @@
+#include "NRF52TimerInterrupt.h"
+#define TIMER_INTERVAL_MS        
+#define TIMER_DURATION_MS 
+volatile uint32_t preMillisTimer = 0;
+NRF52Timer ITimer(NRF_TIMER_x); //inizializzi il timer che vuoi (metti x= 1-4)
+void TimerHandler1()
+{
+  preMillisTimer1 = millis();
+  //codice ISR
+}
+void setup()
+{
+  Serial.begin(115200);
+  while (!Serial && millis() < 5000);
+  delay(100);
+  Serial.print(F("CPU Frequency = "));
+  Serial.print(F_CPU / 1000000);
+  Serial.println(F(" MHz"));
+  // Interval in microsecs
+  if (ITimer1.attachInterruptInterval(TIMER1_INTERVAL_MS * 1000, TimerHandler))
+  	{
+    		preMillisTimer= millis();
+ }
+  else
+    	Serial.println(F("Can't set ITimer1. Select another freq. or timer"));
+}
+
+void loop()
+{
+static unsigned long lastTimer  = 0;
+  	static bool timerStopped = false;
+ if (millis() - lastTimer1 > TIMER1_DURATION_MS)
+  	{
+    			lastTimer = millis();
+if (timerStopped)
+   				 {
+      					preMillisTimer = millis();
+    					ITimer.restartTimer();
+}
+    			else
+    			{
+      				Serial.print(F("Stop ITimer1, millis() = "));
+      				Serial.println(millis());
+     				ITimer.stopTimer();
+    			}
+
+    	timerStopped = !timerStopped;
+ 	 }
+}
+
+
