@@ -16,6 +16,8 @@ BLECharacteristic fallCharacteristic(FALL_CHAR_UUID, BLERead | BLENotify, 20); /
 
 unsigned long lastProximityAlertTime = 0;
 unsigned long lastFallAlertTime = 0;
+unsigned int connession=0;
+
 
 void setup() {
   Serial.begin(115200);
@@ -26,7 +28,7 @@ void setup() {
   Serial.println("Initialise the Bluefruit nRF52 module");
   Bluefruit.begin();          
   Bluefruit.setTxPower(4);    // Imposta la potenza di trasmissione
-  Bluefruit.setName("AlertDevice"); // Imposta il nome del dispositivo Bluetooth
+  Bluefruit.setName("AlertDeviceXXXXXX"); // Imposta il nome del dispositivo Bluetooth
 
   Bluefruit.Periph.setConnectCallback(connect_callback);
   Bluefruit.Periph.setDisconnectCallback(disconnect_callback);
@@ -53,7 +55,7 @@ void setup() {
 
 void loop() {
   unsigned long currentMillis = millis();
-
+if(connession){
   // Simula un alert macchina ogni 3 secondi
   if (currentMillis - lastProximityAlertTime >= 5000) {
     
@@ -64,6 +66,7 @@ sendProximityAlert("Macchina in avvicinamento");
 
     lastProximityAlertTime = currentMillis;
   }
+}
 /*
   // Simula un alert caduta ogni 10 secondi
   if (currentMillis - lastFallAlertTime >= 7000) {
@@ -96,8 +99,11 @@ void connect_callback(uint16_t conn_handle)
   char central_name[32] = { 0 };
   connection->getPeerName(central_name, sizeof(central_name));
 
-  Serial.print("Connected to ");
+  Serial.print("Connected to ");+
   Serial.println(central_name);
+
+  connession=1;
+
 }
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason)
@@ -107,5 +113,7 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
 
   Serial.print("Disconnected, reason = 0x"); Serial.println(reason, HEX);
   Serial.println("Advertising!");
+  connession=0;
+
 }
 

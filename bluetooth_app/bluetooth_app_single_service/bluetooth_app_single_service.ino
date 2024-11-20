@@ -16,6 +16,7 @@ BLECharacteristic fallCharacteristic(FALL_CHAR_UUID, BLERead | BLENotify, 20); /
 
 unsigned long lastProximityAlertTime = 0;
 unsigned long lastFallAlertTime = 0;
+unsigned int connession=0;
 
 void setup() {
   Serial.begin(115200);
@@ -53,6 +54,8 @@ void setup() {
 
 void loop() {
   unsigned long currentMillis = millis();
+  if(connession){
+    
 
   // Simula un alert macchina ogni 3 secondi
   if (currentMillis - lastProximityAlertTime >= 5000) {
@@ -60,17 +63,13 @@ void loop() {
         sendFallAlert("Caduta rilevata");
             delay(2000);
 
-sendProximityAlert("Macchina in avvicinamento");
+       sendProximityAlert("Macchina in avvicinamento");
 
     lastProximityAlertTime = currentMillis;
   }
-/*
-  // Simula un alert caduta ogni 10 secondi
-  if (currentMillis - lastFallAlertTime >= 7000) {
-    sendFallAlert("Caduta rilevata");
-    lastFallAlertTime = currentMillis;
+  
   }
-  */
+
 }
 
 // Funzione per inviare un alert macchina
@@ -98,6 +97,7 @@ void connect_callback(uint16_t conn_handle)
 
   Serial.print("Connected to ");
   Serial.println(central_name);
+  connession=1;
 }
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason)
@@ -107,5 +107,6 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
 
   Serial.print("Disconnected, reason = 0x"); Serial.println(reason, HEX);
   Serial.println("Advertising!");
+  connession=0;
 }
 
