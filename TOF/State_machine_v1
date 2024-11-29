@@ -11,7 +11,7 @@ int imageWidth = 0;
 int number=0;
 int image_frequency=10; //Hz
 int time_ISR= 100; //ms
-char STATE1 = 0; // hypoteticcaly we'll have also STATE 2 and STATE3 for the other 2 TOFs
+int STATE1 = 0; // hypoteticcaly we'll have also STATE 2 and STATE3 for the other 2 TOFs
 // STATE 0:  controllo
 // STATE 11: allerta 1 livello
 // STATE 12: allerta 2 livello
