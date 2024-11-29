@@ -115,32 +115,77 @@ void blink_timer_callback(TimerHandle_t xTimerID)
 }
 */
 
+//void blink_timer_callback(TimerHandle_t xTimerID) {
+  //(void)xTimerID;
+ // number=number+1;
+
+
+//    if (myImager.isDataReady() == true)
+//{
+//
+  //if (myImager.getRangingData(&measurementData)) {
+    //for (int y = 0; y < matrixSize; y++) {
+      //for (int x = 0; x < matrixSize; x++) {
+        //int index = x + (y * matrixSize);
+        //distanceMatrix[y][x] = measurementData.distance_mm[index];
+      //}
+    //}
+//
+  //  Serial.println("Matrice di distanza:");
+    //for (int y = 0; y < matrixSize; y++) {
+      //for (int x = 0; x < matrixSize; x++) {
+        //Serial.print(distanceMatrix[y][x]);
+        //Serial.print("\t");
+      //}
+      //Serial.println();
+    //}
+    //Serial.println();
+    //Serial.println(number);
+  //}
+//}
+//}
+
 void blink_timer_callback(TimerHandle_t xTimerID) {
   (void)xTimerID;
-  number=number+1;
+  number = number + 1;
 
-
-    if (myImager.isDataReady() == true)
-{
-
-  if (myImager.getRangingData(&measurementData)) {
-    for (int y = 0; y < matrixSize; y++) {
-      for (int x = 0; x < matrixSize; x++) {
-        int index = x + (y * matrixSize);
-        distanceMatrix[y][x] = measurementData.distance_mm[index];
+  if (myImager.isDataReady() == true) {
+    if (myImager.getRangingData(&measurementData)) {
+      for (int y = 0; y < matrixSize; y++) {
+        for (int x = 0; x < matrixSize; x++) {
+          int index = x + (y * matrixSize);
+          distanceMatrix[y][x] = measurementData.distance_mm[index];
+        }
       }
-    }
 
-    Serial.println("Matrice di distanza:");
-    for (int y = 0; y < matrixSize; y++) {
-      for (int x = 0; x < matrixSize; x++) {
-        Serial.print(distanceMatrix[y][x]);
-        Serial.print("\t");
+      Serial.println("Matrice di distanza:");
+      for (int y = 0; y < matrixSize; y++) {
+        for (int x = matrixSize - 1; x >= 0; x--) {
+          Serial.print(distanceMatrix[matrixSize - 1 - x][y]);
+          Serial.print("\t");
+        }
+        Serial.println();
       }
       Serial.println();
+      Serial.println("Numero di misurazioni: ");
+      Serial.println(number);
     }
-    Serial.println();
-    Serial.println(number);
   }
 }
-}
+
+//questo codice mi salva i dati in una matrice da sinistra a destra e dall'alto in basso. però mi stampa in questo modo 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
