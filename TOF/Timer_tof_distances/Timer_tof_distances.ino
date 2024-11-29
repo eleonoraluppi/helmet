@@ -173,7 +173,11 @@ void blink_timer_callback(TimerHandle_t xTimerID) {
   }
 }
 
-//questo codice mi salva i dati in una matrice da sinistra a destra e dall'alto in basso. però mi stampa in questo modo 
+//questo codice mi salva i dati in una matrice da sinistra a destra e dall'alto in basso. però mi stampa in questo modo:
+//3       2       1       0
+//7       6       5       4
+//11      10      9       8
+//15      14      13      12
 
 
 
