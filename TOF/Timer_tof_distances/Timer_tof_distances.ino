@@ -181,9 +181,8 @@ void blink_timer_callback(TimerHandle_t xTimerID) {
 
 
 
-
-
-
+// Il secondo ciclo for va cambiato facendo ciclare allo stesso modo di quello sopra, 
+// altrimenti il salvataggio dei dati (indice array) e la sua lettura (per stampare la matrice) non corrispondono
 
 
 
