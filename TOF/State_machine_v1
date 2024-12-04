@@ -6,8 +6,8 @@
 SparkFun_VL53L5CX myImager;
 VL53L5CX_ResultsData measurementData;  // Result data class structure, 1356 byes of RAM
 
-int threshold1=10; //threshold allerta primo livello
-int threshold2=30; //threshold allerta secondo livello
+
+
 int imageResolution;
 int number = 0;
 int image_frequency = 10;  //Hz
@@ -20,13 +20,17 @@ int STATE1 = 0;            // hypoteticcaly we'll have also STATE 2 and STATE3 f
 int sampling = 0;  //set the 2 modes of sampling
 // sampling 0 : chess
 // sampling 1 : all the matrix
-int count_chess = 0;
+
+int threshold1 = 10;  //threshold allerta primo livello
+int threshold2 = 15;  //threshold allerta secondo livello
+int alert1 = 0;
+int alert2 = 0;
 
 SoftwareTimer blinkTimer;  //timer used for ISR
 const int matrixSize = 8;
 int distanceMatrix[matrixSize][matrixSize];
 int distanceMatrixpast[matrixSize][matrixSize];
-int delta_v[matrixSize][matrixSize];
+int delta_v[matrixSize][matrixSize] = { 0 };
 
 
 void setup() {
@@ -83,11 +87,6 @@ void loop() {
     case 0:
       //CONTROLLO
       sampling = 0;
-      // if (number == 100) {
-      //   STATE1 = 11;
-      //   ;
-      //   number = 0;
-      // }
       break;
 
     case 11:
@@ -114,19 +113,34 @@ void blink_timer_callback(TimerHandle_t xTimerID) {
   if (myImager.isDataReady() == true) {
     if (myImager.getRangingData(&measurementData)) {
       Serial.println(number);
+
       switch (sampling) {
         case 0:
+
           //get the data as a chess board
           sampling_chess();
-          if(allerta1==1){
-            STATO1=11; //passo ad allerta di primo livello
-            allerta1=0;
+
+          if (alert1 == 1) {
+            STATE1 = 11;  //passo ad allerta di primo livello
+            alert1 = 0;
+            //Azzero matrice velocità
+            // for (int y = 0; y < matrixSize; y++)  //rows
+            // {
+            //   for (int x = 0; x < matrixSize; x++)  //column
+            //   {
+            //     delta_v[y][x] = 0;
+            //   }
+            // }
           }
           break;
 
         case 1:
           //get all the data
           sampling_total();
+          if (alert2 == 1) {
+            STATE1 = 12;
+            alert2 = 0;
+          }
           break;
       }
     }
@@ -135,26 +149,29 @@ void blink_timer_callback(TimerHandle_t xTimerID) {
 
 void sampling_chess() {
   //Save past matrix
-  for (int y = 0; y < matrixSize / 2; y++)  //rows
+  for (int y = 0; y < matrixSize / 2; y+2)  //rows
   {
-    for (int x = 0; x < matrixSize / 2; x++)  //column
+    for (int x = 0; x < matrixSize / 2; x+2)  //column
     {
       distanceMatrixpast[y][x] = distanceMatrix[y][x];
     }
   }
 
   //Save new matrix
-  for (int y = 0; y < matrixSize / 2; y++)  //rows
+  for (int y = 0; y < matrixSize / 2; y+2)  //rows
   {
-    for (int x = 0; x < matrixSize / 2; x++)  //column
+    for (int x = 0; x < matrixSize / 2; x+2)  //column
     {
       int index = x + (y * matrixSize / 2);
       distanceMatrix[y][x] = measurementData.distance_mm[index];
-      delta_v[y][x] = (distanceMatrixpast[y][x] - distanceMatrix[y][x]) / (time_ISR); //delta_v calcolata in [mm]/[100ms]
-      if(delta_v[y][x]>threshold_1){
-        allerta1=1;
+
+      delta_v[y][x] = (distanceMatrixpast[y][x] - distanceMatrix[y][x]) / (time_ISR);  //delta_v calcolata in [mm]/[100ms]
+
+      if (delta_v[y][x] > threshold1) {
+        alert1 = 1;  //flag che bisogna cabiare stato
       }
-      Serial.print(delta_v[y][x]); // printa tutti zeri non capisco perchè
+
+      Serial.print(delta_v[y][x]);
       Serial.print("\t");
     }
     Serial.println();
@@ -164,6 +181,16 @@ void sampling_chess() {
 
 
 void sampling_total() {
+
+  //Save past matrix
+  for (int y = 0; y < matrixSize / 2; y++)  //rows
+  {
+    for (int x = 0; x < matrixSize / 2; x++)  //column
+    {
+      distanceMatrixpast[y][x] = distanceMatrix[y][x];
+    }
+  }
+
   //get, save and print the data
   for (int y = 0; y < matrixSize; y++)  //rows
   {
@@ -171,8 +198,13 @@ void sampling_total() {
     {
       int index = x + (y * matrixSize);
       distanceMatrix[y][x] = measurementData.distance_mm[index];
-      Serial.print(distanceMatrix[y][x]);
+      delta_v[y][x] = (distanceMatrixpast[y][x] - distanceMatrix[y][x]) / (time_ISR);
+      if (delta_v[y][x] > threshold2) {
+        alert1 = 1;  //flag che bisogna cabiare stato
+      }
+      Serial.print(delta_v[y][x]);
       Serial.print("\t");
+
     }
     Serial.println();
   }
