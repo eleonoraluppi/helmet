@@ -6,31 +6,34 @@
 SparkFun_VL53L5CX myImager;
 VL53L5CX_ResultsData measurementData;  // Result data class structure, 1356 byes of RAM
 
-int imageResolution = 0;  
-int imageWidth = 0;       
-int number=0;
-int image_frequency=10; //Hz
-int time_ISR= 100; //ms
-int STATE1 = 0; // hypoteticcaly we'll have also STATE 2 and STATE3 for the other 2 TOFs
+int threshold1=10; //threshold allerta primo livello
+int threshold2=30; //threshold allerta secondo livello
+int imageResolution;
+int number = 0;
+int image_frequency = 10;  //Hz
+int time_ISR = 100;        //ms
+int STATE1 = 0;            // hypoteticcaly we'll have also STATE 2 and STATE3 for the other 2 TOFs
 // STATE 0:  controllo
 // STATE 11: allerta 1 livello
 // STATE 12: allerta 2 livello
 // STATE 2:  allarme
-int sampling=0; //set the 2 modes of sampling
+int sampling = 0;  //set the 2 modes of sampling
 // sampling 0 : chess
 // sampling 1 : all the matrix
+int count_chess = 0;
 
-SoftwareTimer blinkTimer; //timer used for ISR
+SoftwareTimer blinkTimer;  //timer used for ISR
+const int matrixSize = 8;
+int distanceMatrix[matrixSize][matrixSize];
+int distanceMatrixpast[matrixSize][matrixSize];
+int delta_v[matrixSize][matrixSize];
 
-float distanceMatrix[imageWidth][imageWidth];
-float distanceMatrixpast[imageWidth][imageWidth];
-float relativespeed
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("SparkFun VL53L5CX Imager Example");
-  ////////////////////////////////////////////////////// SET IMAGE SENSOR /////////////////////////////////////////////////// 
+  ////////////////////////////////////////////////////// SET IMAGE SENSOR ///////////////////////////////////////////////////
   Wire.begin();           //This resets to 100kHz I2C
   Wire.setClock(400000);  //Sensor has max I2C freq of 400kHz
 
@@ -44,27 +47,23 @@ void setup() {
   myImager.setResolution(8 * 8);  //Enable all 64 pads
 
   imageResolution = myImager.getResolution();  //Query sensor for current resolution - either 4x4 or 8x8
-  imageWidth = sqrt(imageResolution);          //Calculate printing width
+  //imageWidth = sqrt(imageResolution);          //Calculate printing width
 
   //Using 4x4, min frequency is 1Hz and max is 60Hz
   //Using 8x8, min frequency is 1Hz and max is 15Hz
   bool response = myImager.setRangingFrequency(image_frequency);
-  if (response == true)
-  {
+  if (response == true) {
     int frequency = myImager.getRangingFrequency();
-    if (frequency > 0)
-    {
+    if (frequency > 0) {
       Serial.print("Ranging frequency set to ");
       Serial.print(frequency);
       Serial.println(" Hz.");
-    }
-    else
+    } else
       Serial.println(F("Error recovering ranging frequency."));
-  }
-  else
-  {
+  } else {
     Serial.println(F("Cannot set ranging frequency requested. Freezing..."));
-   while(1);
+    while (1)
+      ;
   }
   myImager.startRanging();
 
@@ -76,104 +75,106 @@ void setup() {
   blinkTimer.start();
 }
 
-void sampling_chess()
-{
 
-}
-
-void sampling_total()
-{
-  //get, save and print the data
-      for (int y = 0; y < imageWidth; y++) //rows 
-      {
-        for (int x = 0; x < imageWidth; x++) //column
-        {
-          int index = x + (y * imageWidth);
-          distanceMatrix[y][x] = measurementData.distance_mm[index];
-          Serial.print(distanceMatrix[y][x]);
-          Serial.print("\t");
-        }
-        Serial.println();
-      }
-      Serial.println();
-      }
-      //Check the data
-}
-
-void loop() 
-{
+void loop() {
   /////////////////////////////////////////STATE MACHINE for TOF 1//////////////////////////////////////////////////////
   //After the set up, the state is automatically set at 0 = CONTROLLO
-  switch(STATE1)
-  {
+  switch (STATE1) {
     case 0:
       //CONTROLLO
-      sampling=0;
-    break;
-    
+      sampling = 0;
+      // if (number == 100) {
+      //   STATE1 = 11;
+      //   ;
+      //   number = 0;
+      // }
+      break;
+
     case 11:
       //ALLERTA 1 LIVELLO
-      sampling=1
-    break;
+      sampling = 1;
+
+      break;
 
     case 12:
       //ALLERTA 2 LIVELLO
-    break;
+      sampling = 1;
+      break;
 
     case 2:
       //ALLARME
-    break;
+      break;
   }
-
 }
-/*
-void blink_timer_callback(TimerHandle_t xTimerID)
-{
-  // freeRTOS timer ID, ignored if not used
-  (void) xTimerID;
-  if (myImager.isDataReady() == true)
-  {
-    if (myImager.getRangingData(&measurementData)) //Read distance data into array
-    {
-      //The ST library returns the data transposed from zone mapping shown in datasheet
-      //Pretty-print data with increasing y, decreasing x to reflect reality
-      for (int y = 0 ; y <= imageWidth * (imageWidth - 1) ; y += imageWidth)
-      {
-        for (int x = imageWidth - 1 ; x >= 0 ; x--)
-        {
-          Serial.print("\t");
-          Serial.print(measurementData.distance_mm[x + y]);
-        }
-        Serial.println();
-      }
-    }
-  }
-  
-}
-*/
 
-void blink_timer_callback(TimerHandle_t xTimerID) 
-{
+void blink_timer_callback(TimerHandle_t xTimerID) {
   (void)xTimerID;
-  number=number+1; //check flag
+  number = number + 1;  //check flag
 
-  if (myImager.isDataReady() == true)
-  {
-    if (myImager.getRangingData(&measurementData)) 
-    {
+  if (myImager.isDataReady() == true) {
+    if (myImager.getRangingData(&measurementData)) {
       Serial.println(number);
-      switch(sampling)
-      {
+      switch (sampling) {
         case 0:
           //get the data as a chess board
           sampling_chess();
-        break;
+          if(allerta1==1){
+            STATO1=11; //passo ad allerta di primo livello
+            allerta1=0;
+          }
+          break;
 
         case 1:
           //get all the data
           sampling_total();
-        break; 
+          break;
       }
     }
   }
+}
+
+void sampling_chess() {
+  //Save past matrix
+  for (int y = 0; y < matrixSize / 2; y++)  //rows
+  {
+    for (int x = 0; x < matrixSize / 2; x++)  //column
+    {
+      distanceMatrixpast[y][x] = distanceMatrix[y][x];
+    }
+  }
+
+  //Save new matrix
+  for (int y = 0; y < matrixSize / 2; y++)  //rows
+  {
+    for (int x = 0; x < matrixSize / 2; x++)  //column
+    {
+      int index = x + (y * matrixSize / 2);
+      distanceMatrix[y][x] = measurementData.distance_mm[index];
+      delta_v[y][x] = (distanceMatrixpast[y][x] - distanceMatrix[y][x]) / (time_ISR); //delta_v calcolata in [mm]/[100ms]
+      if(delta_v[y][x]>threshold_1){
+        allerta1=1;
+      }
+      Serial.print(delta_v[y][x]); // printa tutti zeri non capisco perchè
+      Serial.print("\t");
+    }
+    Serial.println();
+  }
+  Serial.println();
+}
+
+
+void sampling_total() {
+  //get, save and print the data
+  for (int y = 0; y < matrixSize; y++)  //rows
+  {
+    for (int x = 0; x < matrixSize; x++)  //column
+    {
+      int index = x + (y * matrixSize);
+      distanceMatrix[y][x] = measurementData.distance_mm[index];
+      Serial.print(distanceMatrix[y][x]);
+      Serial.print("\t");
+    }
+    Serial.println();
+  }
+  Serial.println();
 }
