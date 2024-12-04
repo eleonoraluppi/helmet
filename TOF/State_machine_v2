@@ -1,0 +1,247 @@
+#include <Arduino.h>
+#include <Adafruit_TinyUSB.h>  // for Serial
+#include <Wire.h>
+#include <SparkFun_VL53L5CX_Library.h>  //http://librarymanager/All#SparkFun_VL53L5CX
+
+SparkFun_VL53L5CX myImager;
+VL53L5CX_ResultsData measurementData;  // Result data class structure, 1356 byes of RAM
+
+
+int imageResolution;
+int number = 0;
+int image_frequency = 10;  //Hz
+int time_ISR = 100;        //ms
+int STATE1 = 0;            // hypoteticcaly we'll have also STATE 2 and STATE3 for the other 2 TOFs
+// STATE 0:  controllo
+// STATE 11: allerta 1 livello
+// STATE 12: allerta 2 livello
+// STATE 2:  allarme
+int sampling = 0;  //set the 2 modes of sampling
+// sampling 0 : chess
+// sampling 1 : all the matrix
+
+int threshold1 = 10;  //threshold allerta primo livello  [cm/s]
+int threshold2 = 15;  //threshold allerta secondo livello[cm/s]
+int alert1 = 0;
+int alert2 = 0;
+int conta_alert1=0;
+int conta_alert2=0;
+int minmatrix;
+
+SoftwareTimer blinkTimer;  //timer used for ISR
+const int matrixSize = 8;
+int distanceMatrix[matrixSize][matrixSize];     //value stored at t=0
+int distanceMatrixpast[matrixSize][matrixSize]; //values stored at t=-1
+int delta_v[matrixSize][matrixSize] = { 0 };    //initializing matrix at 0
+
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("SparkFun VL53L5CX Imager Example");
+  ////////////////////////////////////////////////////// SET IMAGE SENSOR ///////////////////////////////////////////////////
+  Wire.begin();           //This resets to 100kHz I2C
+  Wire.setClock(400000);  //Sensor has max I2C freq of 400kHz
+
+  Serial.println("Initializing sensor board. This can take up to 10s. Please wait.");
+  if (myImager.begin() == false) {
+    Serial.println(F("Sensor not found - check your wiring. Freezing"));
+    while (1)
+      ;
+  }
+
+  myImager.setResolution(8 * 8);  //Enable all 64 pads
+
+  imageResolution = myImager.getResolution();  //Query sensor for current resolution - either 4x4 or 8x8
+  //imageWidth = sqrt(imageResolution);          //Calculate printing width
+
+  //Using 4x4, min frequency is 1Hz and max is 60Hz
+  //Using 8x8, min frequency is 1Hz and max is 15Hz
+  bool response = myImager.setRangingFrequency(image_frequency);
+  if (response == true) {
+    int frequency = myImager.getRangingFrequency();
+    if (frequency > 0) {
+      Serial.print("Ranging frequency set to ");
+      Serial.print(frequency);
+      Serial.println(" Hz.");
+    } else
+      Serial.println(F("Error recovering ranging frequency."));
+  } else {
+    Serial.println(F("Cannot set ranging frequency requested. Freezing..."));
+    while (1)
+      ;
+  }
+  myImager.startRanging();
+
+  ///////////////////////////////////////////////////////// SET TIMER ///////////////////////////////////////////////////
+  // Configure the timer with 100 ms interval and define the callback
+  blinkTimer.begin(time_ISR, blink_timer_callback);
+
+  // Start the timer
+  blinkTimer.start();
+}
+
+
+void loop() {
+  /////////////////////////////////////////STATE MACHINE for TOF 1//////////////////////////////////////////////////////
+  //After the set up, the state is automatically set at 0 = CONTROLLO
+  switch (STATE1) {
+    case 0:
+      //CONTROLLO
+      //Chess control
+      sampling = 0;
+      break;
+
+    case 11:
+      //ALLERTA 1 LIVELLO
+      sampling = 1;
+
+      break;
+
+    case 12:
+      //ALLERTA 2 LIVELLO
+      sampling = 1;
+      break;
+
+    case 2:
+      //ALLARME
+      break;
+  }
+}
+
+void blink_timer_callback(TimerHandle_t xTimerID) {
+  (void)xTimerID;
+  number = number + 1;  //check flag
+
+  if (myImager.isDataReady() == true) {
+    if (myImager.getRangingData(&measurementData)) {
+      Serial.println(number);
+
+      switch (sampling) {
+        case 0:
+
+          //get the data as a chess board
+          sampling_chess();
+
+          if (alert1 == 1) 
+          {
+            STATE1 = 11;  //passo ad allerta di primo livello
+            alert1 = 0;
+            //Azzero matrice velocità
+            // for (int y = 0; y < matrixSize; y++)  //rows
+            // {
+            //   for (int x = 0; x < matrixSize; x++)  //column
+            //   {
+            //     delta_v[y][x] = 0;
+            //   }
+            // }
+          }
+          break;
+
+        case 1:
+          //get all the data
+          sampling_total();
+          if (alert2 == 1) {
+            STATE1 = 12;
+            alert2 = 0;
+          }
+          else
+          {
+            STATE1 = 0;
+          }
+          break;
+      }
+    }
+  }
+}
+
+void sampling_chess() {
+  //Save past matrix
+  memcpy(distanceMatrixpast, distanceMatrix, sizeof(distanceMatrix));
+
+  conta_alert1=0;
+  //Save new matrix
+  for (int y = 0; y < matrixSize; y=y+2)  //rows
+  {
+    for (int x = 0; x < matrixSize; x=x+2)  //column
+    {
+      int index = x + (y * matrixSize / 2); //[0;63]
+      distanceMatrix[y/2][x/2] = measurementData.distance_mm[index];
+
+      delta_v[y/2][x/2] = (distanceMatrixpast[y/2][x/2] - distanceMatrix[y/2][x/2]) / time_ISR; // [cm]/[s]
+
+      //CONTROLLO DA CAMBIARE CON LA DISTANZA
+      if (delta_v[y/2][x/2] > threshold1) {
+        conta_alert1++;  
+      }
+
+      Serial.print(delta_v[y][x]);
+      Serial.print("\t");
+    }
+    Serial.println();
+  }
+  Serial.println();
+  //Acquisition completed -> check if there is somthing coming slow
+  if(conta_alert1>2)
+  {
+      alert1=1;
+  }
+  
+}
+
+
+void sampling_total() {
+
+  //Save past matrix
+  memcpy(distanceMatrixpast, distanceMatrix, sizeof(distanceMatrix));
+
+  conta_alert2=0;
+  maxmatrix=2000;
+  //get, save and print the data
+  for (int y = 0; y < matrixSize; y++)  //rows
+  {
+    for (int x = 0; x < matrixSize; x++)  //column
+    {
+      int index = x + (y * matrixSize);
+      distanceMatrix[y][x] = measurementData.distance_mm[index];
+      delta_v[y][x] = (distanceMatrixpast[y][x] - distanceMatrix[y][x]) / time_ISR; // [cm]/[s]
+      if(distanceMatrixpast[y][x] - distanceMatrix[y][x]<maxmatrix)
+      {
+        minmatrix=distanceMatrix[y][x]/10; //[cm]
+        minspeed= delta_v[y][x];
+      }
+      if (delta_v[y][x] > threshold2)  //threshold in cm/s
+      {
+        conta_alert2++;  //flag che bisogna cabiare stato
+      }
+      Serial.print(delta_v[y][x]);
+      Serial.print("\t");
+
+    }
+    Serial.println();
+  }
+  Serial.println();
+
+  //CONTROLLI
+  switch(STATE1)
+  {
+      case 11:
+        //ALLERTA PRIMO LIVELLO
+        if(minspeed > minmatrix)
+        {
+          alert2=1;
+        }
+
+      break;
+
+      case 12:
+      
+        //ALLERTA SECONDO LIVELLO
+        if(conta_alert2>4)
+        {
+          alert2=1; //update the flag
+        }
+      break;
+      
+  }
+}
