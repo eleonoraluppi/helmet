@@ -30,6 +30,10 @@ int threshold1 = 10;  //threshold allerta primo livello  [cm/s]
 int threshold2 = 15;  //threshold allerta secondo livello[cm/s]
 int alert1_1 = 0;
 int alert2_1 = 0;
+int alert1_2 = 0;
+int alert2_2 = 0;
+int alert1_3 = 0;
+int alert2_3 = 0;
 int reset_state1=0;
 int distanceMatrixpast[matrixSize][matrixSize]; //values stored at t=-1
 
