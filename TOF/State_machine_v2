@@ -27,6 +27,7 @@ int alert2 = 0;
 int conta_alert1=0;
 int conta_alert2=0;
 int minmatrix;
+int reset_state0=0;
 
 SoftwareTimer blinkTimer;  //timer used for ISR
 const int matrixSize = 8;
@@ -73,7 +74,7 @@ void setup() {
   }
   myImager.startRanging();
 
-  ///////////////////////////////////////////////////////// SET TIMER ///////////////////////////////////////////////////
+  /////////////////////////////////////////////////////// SET TIMER  TOF/////////////////////////////////////////////////
   // Configure the timer with 100 ms interval and define the callback
   blinkTimer.begin(time_ISR, blink_timer_callback);
 
@@ -94,13 +95,12 @@ void loop() {
 
     case 11:
       //ALLERTA 1 LIVELLO
-      sampling = 1;
-
+      sampling = 1; //complete sampling
       break;
 
     case 12:
       //ALLERTA 2 LIVELLO
-      sampling = 1;
+      sampling = 1; //complete sampling
       break;
 
     case 2:
@@ -111,7 +111,6 @@ void loop() {
 
 void blink_timer_callback(TimerHandle_t xTimerID) {
   (void)xTimerID;
-  number = number + 1;  //check flag
 
   if (myImager.isDataReady() == true) {
     if (myImager.getRangingData(&measurementData)) {
@@ -126,30 +125,24 @@ void blink_timer_callback(TimerHandle_t xTimerID) {
           if (alert1 == 1) 
           {
             STATE1 = 11;  //passo ad allerta di primo livello
+            reset_state0=0;
             alert1 = 0;
-            //Azzero matrice velocità
-            // for (int y = 0; y < matrixSize; y++)  //rows
-            // {
-            //   for (int x = 0; x < matrixSize; x++)  //column
-            //   {
-            //     delta_v[y][x] = 0;
-            //   }
-            // }
           }
-          break;
+        break;
 
         case 1:
           //get all the data
           sampling_total();
           if (alert2 == 1) {
-            STATE1 = 12;
+            STATE1 = 12; //passo ad allerta di secondo livello
             alert2 = 0;
           }
           else
           {
+            // only one check is performed
             STATE1 = 0;
           }
-          break;
+        break;
       }
     }
   }
@@ -181,10 +174,10 @@ void sampling_chess() {
     Serial.println();
   }
   Serial.println();
-  //Acquisition completed -> check if there is somthing coming slow
+  //Acquisition completed -> check if there is something coming slow
   if(conta_alert1>2)
   {
-      alert1=1;
+    alert1=1;
   }
   
 }
@@ -196,7 +189,7 @@ void sampling_total() {
   memcpy(distanceMatrixpast, distanceMatrix, sizeof(distanceMatrix));
 
   conta_alert2=0;
-  maxmatrix=2000;
+  minmatrix=2000;
   //get, save and print the data
   for (int y = 0; y < matrixSize; y++)  //rows
   {
@@ -205,14 +198,16 @@ void sampling_total() {
       int index = x + (y * matrixSize);
       distanceMatrix[y][x] = measurementData.distance_mm[index];
       delta_v[y][x] = (distanceMatrixpast[y][x] - distanceMatrix[y][x]) / time_ISR; // [cm]/[s]
-      if(distanceMatrixpast[y][x] - distanceMatrix[y][x]<maxmatrix)
+      
+      //Check the min distance get by the matrix
+      if(distanceMatrixpast[y][x] - distanceMatrix[y][x] < minmatrix)
       {
         minmatrix=distanceMatrix[y][x]/10; //[cm]
-        minspeed= delta_v[y][x];
+        minspeed= delta_v[y][x]; //[cm/s]
       }
       if (delta_v[y][x] > threshold2)  //threshold in cm/s
       {
-        conta_alert2++;  //flag che bisogna cabiare stato
+        conta_alert2++;  //flag che conta quanti pixel superano la soglia
       }
       Serial.print(delta_v[y][x]);
       Serial.print("\t");
@@ -222,24 +217,39 @@ void sampling_total() {
   }
   Serial.println();
 
-  //CONTROLLI
+   //CONTROLLI
   switch(STATE1)
   {
       case 11:
         //ALLERTA PRIMO LIVELLO
+        //se siamo già in allerta di 1 livello, manteniamo controllato che la velocità rilevata,
+        //se mantenuta per un secondo, non copra la min distanza tra veicolo e ciclista
         if(minspeed > minmatrix)
         {
-          alert2=1;
+          alert2=1; //nel caso entriamo in ALLARME
         }
-
+        if(conta_alert2==0)
+        {
+          reset_state0++; //flag che salva quante volte non si è rilevato nulla dopo l'allerta di primo livello
+        }
+        if(reset_state0==30) //dopo 3 secondi
+        {
+          STATE1=0;
+        }
       break;
 
       case 12:
-      
         //ALLERTA SECONDO LIVELLO
+        //se siamo in allerta di 2 livello, ci basta verificare che, l'iterazione successiva, venga di
+        //nuovo superata la soglia2 di 30 cm/s. Con la flag conta_alert2 ci assicuriamo che la rilevazione
+        //avvenga da parte di un numero considerevole di pixel (4/64)
         if(conta_alert2>4)
         {
           alert2=1; //update the flag
+        }
+        else
+        {
+          STATE1=0;
         }
       break;
       
