@@ -3,6 +3,9 @@
 #include <Wire.h>
 #include <SparkFun_VL53L5CX_Library.h>  //http://librarymanager/All#SparkFun_VL53L5CX
 
+#define deviceAddress1 0x29 
+#define deviceAddress2 
+#define deviceAddress3 
 SparkFun_VL53L5CX TOF1, TOF2, TOF3;
 VL53L5CX_ResultsData measurementData;  // Result data class structure, 1356 byes of RAM
 
@@ -11,6 +14,7 @@ int imageResolution;
 int number = 0;
 int image_frequency = 10;  //Hz
 int time_ISR = 100;        //ms
+
 
 //////////////////////////////////////////////GLOBAL VARIABLE
 int STATE1 = 0, STATE2 = 0, STATE3 = 0;
