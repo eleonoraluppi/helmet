@@ -2,9 +2,11 @@
 
 // Definisci i UUID per i servizi e le caratteristiche
 #define PROXIMITY_SERVICE_UUID    0x180F  // Servizio di prossimità
-#define FALL_SERVICE_UUID         0x1811  // Servizio di caduta
+//#define FALL_SERVICE_UUID         0x1811  // Servizio di caduta
 #define PROXIMITY_CHAR_UUID       0x2A56  // Caratteristica di prossimità
 #define FALL_CHAR_UUID            0x2A58  // Caratteristica di caduta
+#define DISTRACTION_CHAR_UUID            0x2A54  // Caratteristica di Distrazione
+
 
 // Crea il servizio GATT per il rilevamento della macchina e della caduta
 BLEService proximityService(PROXIMITY_SERVICE_UUID);
@@ -13,9 +15,12 @@ BLEService proximityService(PROXIMITY_SERVICE_UUID);
 // Crea le caratteristiche per la prossimità (alert macchina) e la caduta
 BLECharacteristic proximityCharacteristic(PROXIMITY_CHAR_UUID, BLERead | BLENotify, 20); // max 20 byte
 BLECharacteristic fallCharacteristic(FALL_CHAR_UUID, BLERead | BLENotify, 20); // max 20 byte
+BLECharacteristic distractionCharacteristic(DISTRACTION_CHAR_UUID, BLERead | BLENotify, 20); // max 20 byte
 
 unsigned long lastProximityAlertTime = 0;
 unsigned long lastFallAlertTime = 0;
+unsigned long lastDistractionAlertTime = 0;
+
 unsigned int connession=0;
 
 void setup() {
@@ -27,7 +32,7 @@ void setup() {
   Serial.println("Initialise the Bluefruit nRF52 module");
   Bluefruit.begin();          
   Bluefruit.setTxPower(4);    // Imposta la potenza di trasmissione
-  Bluefruit.setName("AlertDeviceXXXXXX"); // Imposta il nome del dispositivo Bluetooth
+  Bluefruit.setName("AlertDevice"); // Imposta il nome del dispositivo Bluetooth
 
   Bluefruit.Periph.setConnectCallback(connect_callback);
   Bluefruit.Periph.setDisconnectCallback(disconnect_callback);
@@ -40,6 +45,9 @@ void setup() {
   //fallService.begin();
   fallCharacteristic.setProperties(CHR_PROPS_NOTIFY);
   fallCharacteristic.begin();
+
+  distractionCharacteristic.setProperties(CHR_PROPS_NOTIFY);
+  distractionCharacteristic.begin();
   
   /*// Aggiungi i servizi e le caratteristiche
   proximityService.addCharacteristic(proximityCharacteristic);
@@ -58,12 +66,15 @@ void loop() {
     
 
   // Simula un alert macchina ogni 3 secondi
-  if (currentMillis - lastProximityAlertTime >= 5000) {
+  if (currentMillis - lastProximityAlertTime >= 9000) {
     
-        sendFallAlert("Caduta rilevata");
-            delay(2000);
+      sendFallAlert("Caduta rilevata");
+      delay(2000);
 
-       sendProximityAlert("Macchina in avvicinamento");
+      sendProximityAlert("Macchina in avvicinamento");
+      delay(3000);
+      sendDistractionAlert("Sei distratto");
+
 
     lastProximityAlertTime = currentMillis;
   }
@@ -84,6 +95,12 @@ void sendFallAlert(const char* message) {
   Serial.println("Alert caduta: " + String(message));
   //fallCharacteristic.write(message);  // Imposta il valore della caratteristica
   fallCharacteristic.notify(message);           // Invia la notifica
+}
+// Funzione per inviare un alert distrazione
+void sendDistractionAlert(const char* message) {
+  Serial.println("Alert distrazione: " + String(message));
+  //fallCharacteristic.write(message);  // Imposta il valore della caratteristica
+  distractionCharacteristic.notify(message);           // Invia la notifica
 }
 
 //todo: sto cercando di confrontare per capire se questo centra... o è il centrale???
