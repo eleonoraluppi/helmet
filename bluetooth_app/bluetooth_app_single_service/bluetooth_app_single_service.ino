@@ -32,7 +32,7 @@ void setup() {
   Serial.println("Initialise the Bluefruit nRF52 module");
   Bluefruit.begin();          
   Bluefruit.setTxPower(4);    // Imposta la potenza di trasmissione
-  Bluefruit.setName("AlertDevice"); // Imposta il nome del dispositivo Bluetooth
+  Bluefruit.setName("Caschetto1"); // Imposta il nome del dispositivo Bluetooth
 
   Bluefruit.Periph.setConnectCallback(connect_callback);
   Bluefruit.Periph.setDisconnectCallback(disconnect_callback);
@@ -54,6 +54,17 @@ void setup() {
   fallService.addCharacteristic(fallCharacteristic);
 */
   // Inizializza il dispositivo BLE come server
+  
+  Bluefruit.Advertising.addService(proximityService);
+
+  // Opzionalmente aggiungi il nome del dispositivo e altre informazioni
+  Bluefruit.Advertising.addName();
+  
+  // Avvia l'advertising
+  //Bluefruit.Advertising.restartOnDisconnect(true);  // Continua a fare advertising dopo la disconnessione
+  //Bluefruit.Advertising.setInterval(32, 244);       // Intervalli di advertising
+  //Bluefruit.Advertising.setFastTimeout(30);         // Tempo massimo in modalità veloce
+  //Bluefruit.Advertising.start(0);
   Bluefruit.Advertising.start();
   
 
