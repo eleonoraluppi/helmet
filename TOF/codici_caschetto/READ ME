@@ -1,0 +1,11 @@
+READ ME FILE per i codici che ho fatto (michela)
+oneTOF_debugged: file Arduino lasciato così come era funzionante con i vari passaggi di stato
+heat_map: file Arduino per visualizzare i dati corretti
+heat_map_SMA: file Arduino con velocità filtrata con SMA
+ 
+heat_map_distanza_processing: file da caricare su processing, visualizza solo la distanza
+heat_map_velcoita_processing: file da caricare su processing, visualizza solo la velocità
+ 
+heat_map_distanza_velocità: file Arduino in cui stampo distanza calcolata con SMA e la velocità
+heat_map_ENTRAMBI: file processing per visualizzare entrambi in due finestre separate (se vuoi muoverli devi ruotare usando la finestra nera che compare insieme alle altre due)
+heat_map_entrambi_GAUSS: file Arduino per fare filtro gaussiano sulle distanze (NON FUNZIONA)
