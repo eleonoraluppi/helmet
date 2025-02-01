@@ -5,20 +5,27 @@
 #define PROXIMITY_CHAR_UUID       0x2A56  // Caratteristica di prossimità
 #define FALL_CHAR_UUID            0x2A58  // Caratteristica di caduta
 #define DISTRACTION_CHAR_UUID            0x2A54  // Caratteristica di Distrazione
+#define NORM_DATA_CHAR_UUID      0x2A5B  // Caratteristica per ricezione N_norm, E_norm, D_norm
+#define REQUEST_NORM_DATA        0x2A5C
+
 
 
 // Crea il servizio GATT per il rilevamento della macchina e della caduta
 BLEService proximityService(CASCHETTO_SERVICE_UUID);
-//BLEService fallService(FALL_SERVICE_UUID);
 
 // Crea le caratteristiche per la prossimità (alert macchina) e la caduta
 BLECharacteristic proximityCharacteristic(PROXIMITY_CHAR_UUID, BLERead | BLEIndicate, 20); // max 20 byte
 BLECharacteristic fallCharacteristic(FALL_CHAR_UUID, BLERead | BLEIndicate, 20); // max 20 byte
 BLECharacteristic distractionCharacteristic(DISTRACTION_CHAR_UUID, BLERead | BLEIndicate, 20); // max 20 byte
+BLECharacteristic requestNormCharacteristic(REQUEST_NORM_DATA, BLERead | BLEIndicate, 20); // max 20 byte
+BLECharacteristic normDataCharacteristic(NORM_DATA_CHAR_UUID, BLEWrite | BLEWriteWithoutResponse,20); // Max 20 byte
+
 
 unsigned long lastProximityAlertTime = 0;
+unsigned long currentMillis =0;
 
 unsigned int connession=0;
+unsigned int firstTime=1;
 
 void setup() {
   Serial.begin(115200);
@@ -44,6 +51,13 @@ void setup() {
   distractionCharacteristic.setProperties(CHR_PROPS_INDICATE);
   distractionCharacteristic.begin();
 
+  requestNormCharacteristic.setProperties(CHR_PROPS_INDICATE);
+  requestNormCharacteristic.begin();
+
+  normDataCharacteristic.begin();
+  normDataCharacteristic.setWriteCallback(normDataWriteCallback);
+
+
   // Inizializza il dispositivo BLE come server
   Bluefruit.Advertising.addService(proximityService);
   Bluefruit.Advertising.addName();  // aggiungi il nome del dispositivo  
@@ -56,24 +70,39 @@ void setup() {
   
 
   Serial.println("Inizializzazione completata. Attendo connessione...");
+  currentMillis = millis();
+
 }
 
 void loop() {
-  unsigned long currentMillis = millis();
+ // unsigned long currentMillis = millis();
+ 
   if(connession){
+    unsigned long currentMillis2 = millis();
+
+    if (currentMillis2 - currentMillis >= 9000 & firstTime) {
+      firstTime=0;
+      Serial.println("mando un messaggio");
+      requestNormCharacteristic.indicate("1");
+    }           
+
     
   // Simula un alert macchina ogni 3 secondi
-  if (currentMillis - lastProximityAlertTime >= 9000) {
-      sendFallAlert("Caduta rilevata");
-      delay(2000);
+  //if (currentMillis - lastProximityAlertTime >= 9000) {
+    //  sendFallAlert("Caduta rilevata");
+    //  delay(2000);
 
-      sendProximityAlert("Macchina in avvicinamento");
-      delay(3000);
-      sendDistractionAlert("Sei distratto");
+    //  sendProximityAlert("Macchina in avvicinamento");
+    //  delay(3000);
+    //  sendDistractionAlert("Sei distratto");
 
-    lastProximityAlertTime = currentMillis;
-  }
+    //lastProximityAlertTime = currentMillis;
+  //}
   
+  }
+  else{
+      currentMillis = millis();
+
   }
 
 }
@@ -97,6 +126,43 @@ void sendDistractionAlert(const char* message) {
   //fallCharacteristic.write(message);  // Imposta il valore della caratteristica
   distractionCharacteristic.indicate(message);           // Invia la notifica
 }
+
+void normDataWriteCallback(uint16_t conn_handle, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
+  Serial.print("Dati ricevuti: ");
+  
+  String receivedData;
+  for (int i = 0; i < len; i++) {
+    receivedData += (char)data[i];  // Costruisce una stringa dai byte ricevuti
+  }
+  Serial.println(receivedData);
+
+  Serial.print("Dati ricevuti RAW: [");
+Serial.print(receivedData);
+Serial.println("]");
+
+  // Parsing dei valori N_norm, E_norm, D_norm
+double nNorm, eNorm, dNorm;
+  //sscanf(receivedData.c_str(), "%lf,%lf,%lf", &nNorm, &eNorm, &dNorm); //(non funzionava bene!)
+  
+char buffer[receivedData.length() + 1]; // Creiamo un array di caratteri
+strcpy(buffer, receivedData.c_str());   // Copiamo il contenuto della stringa
+
+char *ptr = buffer; // Ora abbiamo un puntatore a char modificabile
+
+// Parsing manuale con gestione dei separatori
+nNorm = strtod(ptr, &ptr);
+if (*ptr == ',') ptr++;  // Salta la virgola
+
+eNorm = strtod(ptr, &ptr);
+if (*ptr == ',') ptr++;  // Salta la virgola
+
+dNorm = strtod(ptr, NULL);
+
+  Serial.print("N_norm: "); Serial.println(nNorm,17);
+  Serial.print("E_norm: "); Serial.println(eNorm,17);
+  Serial.print("D_norm: "); Serial.println(dNorm,17);
+}
+
 
 //todo: sto cercando di confrontare per capire se questo centra... o è il centrale???
 void connect_callback(uint16_t conn_handle)
