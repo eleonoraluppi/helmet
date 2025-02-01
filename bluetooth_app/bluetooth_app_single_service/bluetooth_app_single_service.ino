@@ -176,6 +176,7 @@ void connect_callback(uint16_t conn_handle)
   Serial.print("Connected to ");
   Serial.println(central_name);
   connession=1;
+  firstTime=1;
 }
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason)
